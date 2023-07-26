@@ -5,6 +5,7 @@ import (
 	"sdk/adapters/db"
 )
 
+// client interface
 type SQLDB interface {
 	Connect() (*sql.DB, error)
 	Save(db *sql.DB, sql db.SQLEntity) error
