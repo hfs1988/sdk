@@ -39,15 +39,15 @@ func (p *postgresDB) Connect() (*sql.DB, error) {
 
 func (p *postgresDB) Save(db *sql.DB, sql SQL) error {
 	var vals []string
-	for k, _ := range sql.Cols {
+	for k, _ := range sql.ColsVals.Cols {
 		vals = append(vals, fmt.Sprintf("$%d", k+1))
 	}
 
 	statement := fmt.Sprintf(`
 	INSERT INTO %s (%s)
-	VALUES (%s)`, sql.Table, strings.Join(sql.Cols, ", "), strings.Join(vals, ", "))
+	VALUES (%s)`, sql.Table, strings.Join(sql.ColsVals.Cols, ", "), strings.Join(vals, ", "))
 
-	_, err := db.Exec(statement, sql.Values...)
+	_, err := db.Exec(statement, sql.ColsVals.Values...)
 	if err != nil {
 		return err
 	}
@@ -55,23 +55,32 @@ func (p *postgresDB) Save(db *sql.DB, sql SQL) error {
 	return nil
 }
 
-// func getArgs(db *sql.DB, sql SQL) []interface{} {
-// 	var colsVals = make(map[string]string)
-// 	for k, v := range sql.Cols {
-// 		colsVals[v] = sql.Values[k]
-// 	}
+func (p *postgresDB) Update(db *sql.DB, sql SQL) error {
+	var args []any
+	var filters []string
+	counter := 0
+	for k, v := range sql.Filters.Cols {
+		counter++
+		filters = append(filters, fmt.Sprintf("%s=$%d", v, k+1))
+		args = append(args, sql.Filters.Values[k])
+	}
 
-// 	var args []interface{}
-// 	tcols, _ := schema.ColumnTypes(db, "", sql.Table)
-// 	for _, v := range tcols {
-// 		var value interface{} = colsVals[v.Name()]
-// 		switch v.DatabaseTypeName() {
-// 		case "INTEGER":
-// 			value, _ = strconv.Atoi(value.(string))
-// 		}
+	var sets []string
+	for k, v := range sql.ColsVals.Cols {
+		sets = append(sets, fmt.Sprintf("%s=$%d", v, counter+k+1))
+		args = append(args, sql.ColsVals.Values[k])
+	}
 
-// 		args = append(args, value)
-// 	}
+	statement := fmt.Sprintf(`
+	UPDATE %s
+	SET %s
+	WHERE %s
+	`, sql.Table, strings.Join(sets, ", "), strings.Join(filters, " and "))
 
-// 	return args
-// }
+	_, err := db.Exec(statement, args...)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

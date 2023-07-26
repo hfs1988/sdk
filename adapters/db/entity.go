@@ -1,7 +1,12 @@
 package db
 
 type SQL struct {
-	Table  string
+	Table    string
+	ColsVals SQLColsVals
+	Filters  SQLColsVals
+}
+
+type SQLColsVals struct {
 	Cols   []string
-	Values []interface{}
+	Values []any
 }

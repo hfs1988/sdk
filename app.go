@@ -10,6 +10,7 @@ import (
 type SQLDB interface {
 	Connect() (*sql.DB, error)
 	Save(db *sql.DB, sql db.SQL) error
+	Update(db *sql.DB, sql db.SQL) error
 }
 
 const (
@@ -31,9 +32,21 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	database.Save(dbSQL, db.SQL{
-		Table:  "users",
-		Cols:   []string{"name", "email", "age"},
-		Values: []interface{}{"Husni Firmansyah", "husni.firmansyah@gmail.com", 34},
+	// database.Save(dbSQL, db.SQL{
+	// 	Table:  "users",
+	// 	Cols:   []string{"name", "email", "age"},
+	// 	Values: []interface{}{"Husni Firmansyah", "husni.firmansyah@gmail.com", 34},
+	// })
+
+	database.Update(dbSQL, db.SQL{
+		Table: "users",
+		ColsVals: db.SQLColsVals{
+			Cols:   []string{"name", "email", "age"},
+			Values: []any{"Husni", "husni.firmansyah@outlook.com", 35},
+		},
+		Filters: db.SQLColsVals{
+			Cols:   []string{"id"},
+			Values: []any{1},
+		},
 	})
 }
