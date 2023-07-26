@@ -19,8 +19,12 @@ func GetRouterInstance(port int) *router {
 	}
 }
 
-func (r *router) Get(queryString string, f http.HandlerFunc) {
-	r.route.Get(queryString, f)
+func (r *router) Get(path string, f http.HandlerFunc) {
+	r.route.Get(path, f)
+}
+
+func (r *router) Post(path string, f http.HandlerFunc) {
+	r.route.Post(path, f)
 }
 
 func (r *router) ListenAndServe() {
