@@ -38,17 +38,17 @@ func (p *postgresDB) Connect() (*sql.DB, error) {
 	return db, nil
 }
 
-func (p *postgresDB) Save(db *sql.DB, sql SQL) error {
+func (p *postgresDB) Save(db *sql.DB, en SQLEntity) error {
 	var vals []string
-	for k, _ := range sql.ColsVals.Cols {
+	for k, _ := range en.ColsVals.Cols {
 		vals = append(vals, fmt.Sprintf("$%d", k+1))
 	}
 
 	statement := fmt.Sprintf(`
 	INSERT INTO %s (%s)
-	VALUES (%s)`, sql.Table, strings.Join(sql.ColsVals.Cols, ", "), strings.Join(vals, ", "))
+	VALUES (%s)`, en.Table, strings.Join(en.ColsVals.Cols, ", "), strings.Join(vals, ", "))
 
-	_, err := db.Exec(statement, sql.ColsVals.Values...)
+	_, err := db.Exec(statement, en.ColsVals.Values...)
 	if err != nil {
 		return err
 	}
@@ -56,20 +56,20 @@ func (p *postgresDB) Save(db *sql.DB, sql SQL) error {
 	return nil
 }
 
-func (p *postgresDB) Update(db *sql.DB, sql SQL) error {
-	counter, filters, args := getFilters(sql)
+func (p *postgresDB) Update(db *sql.DB, en SQLEntity) error {
+	counter, filters, args := getFilters(en)
 
 	var sets []string
-	for k, v := range sql.ColsVals.Cols {
+	for k, v := range en.ColsVals.Cols {
 		sets = append(sets, fmt.Sprintf("%s=$%d", v, counter+k+1))
-		args = append(args, sql.ColsVals.Values[k])
+		args = append(args, en.ColsVals.Values[k])
 	}
 
 	statement := fmt.Sprintf(`
 	UPDATE %s
 	SET %s
 	WHERE %s
-	`, sql.Table, strings.Join(sets, ", "), strings.Join(filters, " and "))
+	`, en.Table, strings.Join(sets, ", "), strings.Join(filters, " and "))
 
 	_, err := db.Exec(statement, args...)
 	if err != nil {
@@ -79,14 +79,14 @@ func (p *postgresDB) Update(db *sql.DB, sql SQL) error {
 	return nil
 }
 
-func (p *postgresDB) Get(db *sql.DB, sql SQL) []map[string]any {
+func (p *postgresDB) Get(db *sql.DB, en SQLEntity) []map[string]any {
 	var results []map[string]any
 
-	_, filters, args := getFilters(sql)
+	_, filters, args := getFilters(en)
 
 	statement := fmt.Sprintf(`
 	SELECT %s FROM %s WHERE %s
-	`, strings.Join(sql.ColsVals.Cols, ", "), sql.Table, strings.Join(filters, " and "))
+	`, strings.Join(en.ColsVals.Cols, ", "), en.Table, strings.Join(filters, " and "))
 
 	rows, _ := db.Query(statement, args...)
 	defer rows.Close()
@@ -105,10 +105,10 @@ func (p *postgresDB) Get(db *sql.DB, sql SQL) []map[string]any {
 			switch fmt.Sprintf("%T", v) {
 			case "*string":
 				value := v.(*string)
-				result[sql.ColsVals.Cols[k]] = *value
+				result[en.ColsVals.Cols[k]] = *value
 			case "*int32":
 				value := v.(*int32)
-				result[sql.ColsVals.Cols[k]] = *value
+				result[en.ColsVals.Cols[k]] = *value
 			}
 		}
 
@@ -118,15 +118,15 @@ func (p *postgresDB) Get(db *sql.DB, sql SQL) []map[string]any {
 	return results
 }
 
-func getFilters(sql SQL) (int, []string, []any) {
+func getFilters(en SQLEntity) (int, []string, []any) {
 	counter := 0
 	var filters []string
 	var args []any
 
-	for k, v := range sql.Filters.Cols {
+	for k, v := range en.Filters.Cols {
 		counter++
 		filters = append(filters, fmt.Sprintf("%s=$%d", v, k+1))
-		args = append(args, sql.Filters.Values[k])
+		args = append(args, en.Filters.Values[k])
 	}
 
 	return counter, filters, args

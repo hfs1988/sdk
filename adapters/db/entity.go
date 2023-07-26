@@ -1,6 +1,6 @@
 package db
 
-type SQL struct {
+type SQLEntity struct {
 	Table    string
 	ColsVals SQLColsVals
 	Filters  SQLColsVals
