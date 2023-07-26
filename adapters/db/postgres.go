@@ -3,6 +3,7 @@ package db
 import (
 	"database/sql"
 	"fmt"
+	"reflect"
 	"strings"
 )
 
@@ -56,14 +57,7 @@ func (p *postgresDB) Save(db *sql.DB, sql SQL) error {
 }
 
 func (p *postgresDB) Update(db *sql.DB, sql SQL) error {
-	var args []any
-	var filters []string
-	counter := 0
-	for k, v := range sql.Filters.Cols {
-		counter++
-		filters = append(filters, fmt.Sprintf("%s=$%d", v, k+1))
-		args = append(args, sql.Filters.Values[k])
-	}
+	counter, filters, args := getFilters(sql)
 
 	var sets []string
 	for k, v := range sql.ColsVals.Cols {
@@ -83,4 +77,57 @@ func (p *postgresDB) Update(db *sql.DB, sql SQL) error {
 	}
 
 	return nil
+}
+
+func (p *postgresDB) Get(db *sql.DB, sql SQL) []map[string]any {
+	var results []map[string]any
+
+	_, filters, args := getFilters(sql)
+
+	statement := fmt.Sprintf(`
+	SELECT %s FROM %s WHERE %s
+	`, strings.Join(sql.ColsVals.Cols, ", "), sql.Table, strings.Join(filters, " and "))
+
+	rows, _ := db.Query(statement, args...)
+	defer rows.Close()
+
+	for rows.Next() {
+		columns, _ := rows.ColumnTypes()
+		valuePointer := make([]interface{}, len(columns))
+		for i, column := range columns {
+			valuePointer[i] = reflect.New(column.ScanType()).Interface()
+		}
+
+		rows.Scan(valuePointer...)
+
+		result := make(map[string]any)
+		for k, v := range valuePointer {
+			switch fmt.Sprintf("%T", v) {
+			case "*string":
+				value := v.(*string)
+				result[sql.ColsVals.Cols[k]] = *value
+			case "*int32":
+				value := v.(*int32)
+				result[sql.ColsVals.Cols[k]] = *value
+			}
+		}
+
+		results = append(results, result)
+	}
+
+	return results
+}
+
+func getFilters(sql SQL) (int, []string, []any) {
+	counter := 0
+	var filters []string
+	var args []any
+
+	for k, v := range sql.Filters.Cols {
+		counter++
+		filters = append(filters, fmt.Sprintf("%s=$%d", v, k+1))
+		args = append(args, sql.Filters.Values[k])
+	}
+
+	return counter, filters, args
 }

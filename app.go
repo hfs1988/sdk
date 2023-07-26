@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"sdk/adapters/db"
 
 	_ "github.com/lib/pq"
@@ -11,6 +12,7 @@ type SQLDB interface {
 	Connect() (*sql.DB, error)
 	Save(db *sql.DB, sql db.SQL) error
 	Update(db *sql.DB, sql db.SQL) error
+	Get(db *sql.DB, sql db.SQL) []map[string]any
 }
 
 const (
@@ -38,15 +40,27 @@ func main() {
 	// 	Values: []interface{}{"Husni Firmansyah", "husni.firmansyah@gmail.com", 34},
 	// })
 
-	database.Update(dbSQL, db.SQL{
+	// database.Update(dbSQL, db.SQL{
+	// 	Table: "users",
+	// 	ColsVals: db.SQLColsVals{
+	// 		Cols:   []string{"name", "email", "age"},
+	// 		Values: []any{"Husni Firmansyah", "husni.firmansyah@gmail.com", 35},
+	// 	},
+	// 	Filters: db.SQLColsVals{
+	// 		Cols:   []string{"id"},
+	// 		Values: []any{1},
+	// 	},
+	// })
+
+	results := database.Get(dbSQL, db.SQL{
 		Table: "users",
 		ColsVals: db.SQLColsVals{
-			Cols:   []string{"name", "email", "age"},
-			Values: []any{"Husni", "husni.firmansyah@outlook.com", 35},
+			Cols: []string{"name", "email", "age"},
 		},
 		Filters: db.SQLColsVals{
 			Cols:   []string{"id"},
 			Values: []any{1},
 		},
 	})
+	fmt.Println(results)
 }
