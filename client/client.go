@@ -2,7 +2,8 @@ package client
 
 import (
 	"database/sql"
-	"sdk/adapters/db"
+
+	"github.com/hfs1988/sdk/adapters/db"
 )
 
 // client interface
