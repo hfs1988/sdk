@@ -1,0 +1,37 @@
+version: '3.9'
+services:
+  app:
+    container_name: golang_container
+    tty: true
+    build: .
+    ports:
+      - 3000:3000
+    restart: on-failure
+    volumes:
+      - .:/app
+    depends_on:
+      - postgresdb
+    networks:
+      - codebase
+
+  postgresdb:
+    image: postgres:latest
+    container_name: postgres_container
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=root
+      - POSTGRES_DB=postgres
+      - DATABASE_HOST=postgresdb
+    ports:
+      - '5432:5432'
+    networks:
+      - codebase
+    volumes: 
+      - ./postgres-data:/var/lib/postgresql/data
+      # copy the sql script to create tables
+      - ./sql/data_seed.sql:/docker-entrypoint-initdb.d/data_seed.sql
+
+# Networks to be created to facilitate communication between containers
+networks:
+  codebase:
+    driver: bridge
